@@ -25,34 +25,30 @@ FROM nexus3.o-ran-sc.org:10002/o-ran-sc/bldr-ubuntu20-c-go:1.0.0 as ubuntu
 WORKDIR /opt/e2/
 
 ARG BUILD_TYPE="Release"
-RUN apt-get update
-RUN apt-get install -y lcov
+RUN apt-get update && apt-get install -y lcov libgtest-dev google-mock && apt-get clean
 RUN mkdir -p /opt/e2/RIC-E2-TERMINATION/ \
     && mkdir -p /opt/e2/RIC-E2-TERMINATION/TEST/T1 \
     && mkdir -p /opt/e2/RIC-E2-TERMINATION/TEST/T2 \
     && mkdir -p /opt/e2/RIC-E2-TERMINATION/3rdparty
 
 COPY . /opt/e2/RIC-E2-TERMINATION/
-RUN apt-get install -y libgtest-dev
 RUN cd /usr/src/gtest && cmake CMakeLists.txt && make && cp lib/*.a /usr/lib
-RUN apt-get install -y google-mock
 RUN cd /usr/src/googletest/googlemock  && cmake CMakeLists.txt && make && cp lib/*.a /usr/lib
 RUN cp -rf /usr/src/googletest/googlemock/include/gmock /usr/include/
  
 RUN mv /opt/e2/RIC-E2-TERMINATION/CMakeLists.txt /opt/e2/ && cat /opt/e2/RIC-E2-TERMINATION/config/config.conf \
     && wget --content-disposition https://github.com/cgreen-devs/cgreen/releases/download/1.2.0/cgreen_1.2.0_amd64.deb \
-    && dpkg -i cgreen_1.2.0_amd64.deb \
+    && dpkg -i cgreen_1.2.0_amd64.deb && rm cgreen_1.2.0_amd64.deb \
     && wget --content-disposition https://packagecloud.io/o-ran-sc/release/packages/debian/stretch/rmr_4.8.0_amd64.deb/download.deb \
-    && dpkg -i rmr_4.8.0_amd64.deb \
+    && dpkg -i rmr_4.8.0_amd64.deb && rm rmr_4.8.0_amd64.deb \
     && wget --content-disposition https://packagecloud.io/o-ran-sc/release/packages/debian/stretch/rmr-dev_4.8.0_amd64.deb/download.deb \
-    && dpkg -i rmr-dev_4.8.0_amd64.deb \
+    && dpkg -i rmr-dev_4.8.0_amd64.deb && rm rmr-dev_4.8.0_amd64.deb \
     && wget --content-disposition https://packagecloud.io/o-ran-sc/release/packages/debian/stretch/mdclog_0.1.1-1_amd64.deb/download.deb \
-    && dpkg -i mdclog_0.1.1-1_amd64.deb \
+    && dpkg -i mdclog_0.1.1-1_amd64.deb && rm mdclog_0.1.1-1_amd64.deb \
     && wget --content-disposition https://packagecloud.io/o-ran-sc/release/packages/debian/stretch/mdclog-dev_0.1.1-1_amd64.deb/download.deb \
-    && dpkg -i mdclog-dev_0.1.1-1_amd64.deb \
+    && dpkg -i mdclog-dev_0.1.1-1_amd64.deb && rm mdclog-dev_0.1.1-1_amd64.deb \
     && apt-get update && apt-get install -y libcurl4-gnutls-dev gawk libtbb-dev libtbb-doc \
-    && apt-get update && apt-get -y install libtbb2 \
-    && apt-get install  -y python3 python3-pip python3-setuptools python3-wheel ninja-build \
+    libtbb2 python3 python3-pip python3-setuptools python3-wheel ninja-build && apt-get clean\
     && pip3 install  meson \
     && cd /opt/e2/RIC-E2-TERMINATION/3rdparty && git clone https://github.com/pistacheio/pistache.git  && cd pistache \
     && meson setup build  \
@@ -71,7 +67,6 @@ RUN cd /opt/e2/ && /usr/bin/cmake -D CMAKE_BUILD_TYPE=$BUILD_TYPE . && make \
     && echo "3" > /opt/e2/rmr.verbose
 
 
-
 RUN if [$BUILD_TYPE == "Debug"] ; then make e2_coverage ; fi
 
 #    && git clone http://gerrit.o-ran-sc.org/r/ric-plt/tracelibcpp \
@@ -84,18 +79,14 @@ RUN if [$BUILD_TYPE == "Debug"] ; then make e2_coverage ; fi
 #    && cd /usr/local/lib/ && find / -type f -name "libyaml-cpp.a" -exec cp {} libyaml-cpp.a \; \
 #    && find / -type f -name "libopentracing.a" -exec cp {} libopentracing.a \; && cd /opt/e2/RIC-E2-TERMINATION && ls nlohmann  \
 
-FROM ubuntu:20.04
-RUN apt-get update && apt-get install -y net-tools iputils-ping curl tcpdump && mkdir -p /opt/e2/config
+FROM ubuntu:20.04 as stage2
+RUN apt-get update && apt-get install -y net-tools iputils-ping curl tcpdump && mkdir -p /opt/e2/config && apt-get clean
 
 COPY --from=ubuntu /opt/e2/e2 /opt/e2/e2
 COPY --from=ubuntu /opt/e2/rmr.verbose /tmp/rmr.verbose
 COPY --from=ubuntu /opt/e2/RIC-E2-TERMINATION/dockerRouter.txt /opt/e2/dockerRouter.txt
 COPY --from=ubuntu /opt/e2/RIC-E2-TERMINATION/config/config.conf /opt/e2/config/config.conf
 COPY --from=ubuntu /opt/e2/RIC-E2-TERMINATION/startup.sh /opt/e2/startup.sh
-#COPY --from=ubuntu /opt/e2/RIC-E2-TERMINATION/tracelibcpp/build/libtracelibcpp.so /usr/local/lib/libtracelibcpp.so
-#COPY --from=ubuntu /opt/e2/RIC-E2-TERMINATION/tracelibcpp/build/libtracelibcpp.so.0 /usr/local/lib/libtracelibcpp.so.0
-#COPY --from=ubuntu /opt/e2/RIC-E2-TERMINATION/tracelibcpp/build/libtracelibcpp.so.0.0.2 /usr/local/lib/libtracelibcpp.so.0.0.2
-
 
 COPY --from=ubuntu /usr/local/lib/librmr_si.so.4.8.0 /usr/local/lib/librmr_si.so.4.8.0
 COPY --from=ubuntu /usr/local/lib/librmr_si.so.4  /usr/local/lib/librmr_si.so.4
@@ -120,13 +111,10 @@ COPY --from=ubuntu /usr/lib/x86_64-linux-gnu/libtbbmalloc_proxy.so.2 /usr/local/
 
 COPY --from=ubuntu /usr/lib/x86_64-linux-gnu/libboost_log_setup.so /usr/lib/libboost_log_setup.so
 COPY --from=ubuntu /usr/lib/x86_64-linux-gnu/libboost_log_setup.so.1.71.0 /usr/lib/libboost_log_setup.so.1.71.0
-#COPY --from=ubuntu /usr/local/lib/libpistache.so  /usr/local/lib/libpistache.so
-#COPY --from=ubuntu /usr/local/lib/libpistache.so.0  /usr/local/lib/libpistache.so.0
-#COPY --from=ubuntu /usr/local/lib/libpistache.so.0.0.001-git20191031  /usr/local/lib/libpistache.so.0.0.001-git20191031
 
 ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ='Asia/Kolkata'
-RUN apt-get update && apt-get install -y libboost-all-dev
+RUN apt-get update && apt-get install -y libboost-all-dev && apt-get clean
 
 COPY --from=ubuntu /usr/lib/x86_64-linux-gnu/libboost_log.so /usr/lib/libboost_log.so
 COPY --from=ubuntu /usr/lib/x86_64-linux-gnu/libboost_log.so.1.71.0 /usr/lib/libboost_log.so.1.71.0
@@ -159,6 +147,9 @@ COPY --from=ubuntu /usr/lib/x86_64-linux-gnu/libcurl-gnutls.so.4 /usr/lib/libcur
 COPY --from=ubuntu /usr/lib/x86_64-linux-gnu/libcurl-gnutls.so /usr/lib/libcurl-gnutls.so
 
 COPY --from=ubuntu /usr/local/bin/rmr_probe /opt/e2/rmr_probe
+
+FROM ubuntu:20.04 as final 
+COPY --from=stage2 / /
 
 WORKDIR /opt/e2/
 ENV LD_LIBRARY_PATH=/usr/local/lib
