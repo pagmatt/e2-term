@@ -25,19 +25,19 @@ FROM nexus3.o-ran-sc.org:10002/o-ran-sc/bldr-ubuntu20-c-go:1.0.0 as ubuntu
 WORKDIR /opt/e2/
 
 ARG BUILD_TYPE="Release"
-RUN apt-get update
-RUN apt-get install -y lcov
-RUN mkdir -p /opt/e2/RIC-E2-TERMINATION/ \
+RUN apt-get update \
+    && apt-get install -y lcov \
+    && mkdir -p /opt/e2/RIC-E2-TERMINATION/ \
     && mkdir -p /opt/e2/RIC-E2-TERMINATION/TEST/T1 \
     && mkdir -p /opt/e2/RIC-E2-TERMINATION/TEST/T2 \
     && mkdir -p /opt/e2/RIC-E2-TERMINATION/3rdparty
 
 COPY . /opt/e2/RIC-E2-TERMINATION/
-RUN apt-get install -y libgtest-dev
-RUN cd /usr/src/gtest && cmake CMakeLists.txt && make && cp lib/*.a /usr/lib
-RUN apt-get install -y google-mock
-RUN cd /usr/src/googletest/googlemock  && cmake CMakeLists.txt && make && cp lib/*.a /usr/lib
-RUN cp -rf /usr/src/googletest/googlemock/include/gmock /usr/include/
+RUN apt-get install -y libgtest-dev \
+    && cd /usr/src/gtest && cmake CMakeLists.txt && make && cp lib/*.a /usr/lib \
+    && apt-get install -y google-mock \
+    && cd /usr/src/googletest/googlemock  && cmake CMakeLists.txt && make && cp lib/*.a /usr/lib \
+    && cp -rf /usr/src/googletest/googlemock/include/gmock /usr/include/
  
 RUN mv /opt/e2/RIC-E2-TERMINATION/CMakeLists.txt /opt/e2/ && cat /opt/e2/RIC-E2-TERMINATION/config/config.conf \
     && wget --content-disposition https://github.com/cgreen-devs/cgreen/releases/download/1.2.0/cgreen_1.2.0_amd64.deb \
